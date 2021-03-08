@@ -25,9 +25,3 @@ function spectral_bulk(ω, R::Location, s::BulkSystem)
     correction_spectral = -δρ_calc(R, ω + 1im * η, potential) / π |> imag
     return (pristine_spectral + correction_spectral)
 end
-
-function STM_Integrated(V, R::Location, s::BulkSystem)
-    μ = s.μ
-    res = quadgk(x -> spectral_bulk(x, R, s), μ, μ + V)
-    return res[1]
-end

@@ -80,3 +80,39 @@ function propagator_matrix(z, Coords::Vector{Location})
     end
     return out
 end
+
+## Potential shapes
+
+function mkRing(numP::Int, U::Float64, R::Float64)
+    res = map(
+        x -> LocalPotential(
+            U,
+            locator(
+                R * cos(2 * π / numP * x + π / numP),
+                R * sin(2 * π / numP * x + π / numP),
+            ),
+        ),
+        1:numP,
+    )
+    return res
+end
+
+function mkFig8(numP::Int, U::Float64, R::Float64)
+    Potential_Top = map(
+        x -> LocalPotential(
+            U,
+            locator(R * cos(x - π / 5), R * sin(x - π / 5) + R * sin(π / 5)),
+        ),
+        range(0, 7 * π / 5, length = Integer(numP / 2 + 1)),
+    )
+
+    Potential_Bottom = map(
+        x -> LocalPotential(
+            U,
+            locator(R * cos(x - π / 5), -R * sin(x - π / 5) - R * sin(π / 5)),
+        ),
+        range(0, 7 * π / 5, length = Integer(numP / 2 + 1)),
+    )
+    Potential_Bottom = Potential_Bottom[2:end-1]
+    Potential = vcat(Potential_Top, Potential_Bottom)
+end
