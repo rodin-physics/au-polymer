@@ -6,10 +6,8 @@ function δρ_calc(loc::Location, z, potential::Vector{LocalPotential})
     prop_mat = propagator_matrix(z, map(x -> x.loc, potential))
     PropVectorR = map(x -> Ξ(x.loc - loc, z), potential)
     U = map(x -> x.U, potential) |> Diagonal
-    numQD = length(imps)
     D = U * inv(Diagonal(ones(n_UCs, n_UCs)) .- prop_mat * U)
     return (transpose(PropVectorR)*D*PropVectorR)[1]
-
 end
 
 function δρR(R::Location, s::BulkSystem)
@@ -24,8 +22,7 @@ function spectral_bulk(ω, R::Location, s::BulkSystem)
     μ = s.μ
     potential = s.potential
     pristine_spectral = -Ξ(Location(0, 0), ω + 1im * η) / π |> imag
-    correction_spectral =
-        -δρ_calc(R, ω + 1im * η, qd, potential, hop) / π |> imag
+    correction_spectral = -δρ_calc(R, ω + 1im * η, potential) / π |> imag
     return (pristine_spectral + correction_spectral)
 end
 
