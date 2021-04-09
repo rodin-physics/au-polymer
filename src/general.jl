@@ -81,6 +81,20 @@ function propagator_matrix(z, Coords::Vector{Location})
     return out
 end
 
+function spectral_bulk(ω, R::Location, s::BulkSystem)
+    z = ω + 1im * η
+    potential = s.potential
+    pristine_spectral = -Ξ(Location(0, 0), ω + 1im * η) / π |> imag
+    n_UCs = length(potential)
+    prop_mat = propagator_matrix(z, map(x -> x.loc, potential))
+    PropVectorR = map(x -> Ξ(x.loc - R, z), potential)
+    U = map(x -> x.U, potential) |> Diagonal
+    D = U * inv(Diagonal(ones(n_UCs)) .- prop_mat * U)
+    correction_spectral =
+        -((transpose(PropVectorR)*D*PropVectorR)[1]) / π |> imag
+    return (pristine_spectral + correction_spectral)
+end
+
 ## Potential shapes
 
 function mkRing(numP::Int, U::Float64, R::Float64)
@@ -97,22 +111,49 @@ function mkRing(numP::Int, U::Float64, R::Float64)
     return res
 end
 
-function mkFig8(numP::Int, U::Float64, R::Float64)
-    Potential_Top = map(
-        x -> LocalPotential(
-            U,
-            locator(R * cos(x - π / 5), R * sin(x - π / 5) + R * sin(π / 5)),
-        ),
-        range(0, 7 * π / 5, length = Integer(numP / 2 + 1)),
-    )
+# function mkFig8(numP::Int, U::Float64, R::Float64)
+#     Potential_Top = map(
+#         x -> LocalPotential(
+#             U,
+#             locator(R * cos(x - π / 5), R * sin(x - π / 5) + R * sin(π / 5)),
+#         ),
+#         range(0, 7 * π / 5, length = Integer(numP / 2 + 1)),
+#     )
+#
+#     Potential_Bottom = map(
+#         x -> LocalPotential(
+#             U,
+#             locator(R * cos(x - π / 5), -R * sin(x - π / 5) - R * sin(π / 5)),
+#         ),
+#         range(0, 7 * π / 5, length = Integer(numP / 2 + 1)),
+#     )
+#     Potential_Bottom = Potential_Bottom[2:end-1]
+#     Potential = vcat(Potential_Top, Potential_Bottom)
+# end
 
-    Potential_Bottom = map(
-        x -> LocalPotential(
-            U,
-            locator(R * cos(x - π / 5), -R * sin(x - π / 5) - R * sin(π / 5)),
-        ),
-        range(0, 7 * π / 5, length = Integer(numP / 2 + 1)),
+function mkFig8(
+    numP::Int,
+    U::Float64,
+    R1::Float64,
+    R2::Float64,
+    d1::Float64,
+    d2::Float64,
+)
+    θ1 = acos(d1 / R1)
+    θ2 = acos(d2 / R2)
+    arc = 2 * (π - θ1) * R1 + 2 * (π - θ2) * R2
+    numP1 = (numP - 2) * 2 * (π - θ1) * R1 / arc + 2 |> round |> Integer
+    numP2 = (numP - 2) * 2 * (π - θ2) * R2 / arc + 2 |> round |> Integer
+
+    Potential_Right = map(
+        x -> LocalPotential(U, locator(d1 + R1 * cos(x), R1 * sin(x))),
+        range(-π + θ1, π - θ1, length = numP1),
     )
-    Potential_Bottom = Potential_Bottom[2:end-1]
-    Potential = vcat(Potential_Top, Potential_Bottom)
+    Potential_Left = map(
+        x -> LocalPotential(U, locator(-d2 + R2 * cos(x), R2 * sin(x))),
+        range(θ2, 2 * π - θ2, length = numP2),
+    )
+    Potential_Left = Potential_Left[2:end-1]
+
+    Potential = vcat(Potential_Right, Potential_Left)
 end
