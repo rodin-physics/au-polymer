@@ -3,12 +3,11 @@ using SpecialFunctions
 using LinearAlgebra
 
 ## Parameters
-const ħ = 1;
 const ryd = 13.606;     # Rydberg constant in eV
 const a0 = 0.529;       # Bohr radius in angstroms
 
-const mx = 0.27;        # Effective mass in the x and y direction in m_e -
-const my = 0.27;        # anisotropy tuning
+const mx = 0.27;        # Effective mass in x direction in m_e
+const my = 0.27;        # Effective mass in y direction in m_e
 
 # Lattice Basis vectors in Bohr radii
 b1 = 2.88 / a0 * [1, 0]
@@ -19,12 +18,12 @@ UC_area = abs.(b1[1] * b2[2] - b1[2] * b2[1]);
 # Upper limit of propagator integral
 C = 4 * π / UC_area / sqrt(mx * my) * ryd;
 
-## Integration
+## Integration parameters
 const ν = 1e-4;         # Relative tolerance for integration
 const η = 1e-6;         # Small number for imaginary parts
 const NumEvals = 1e5;   # Max number of integrals in quadgk
 
-## Location struct to label bulk unit cells.
+# Location struct to label bulk unit cells.
 struct Location
     v1::Int64   # Coefficient of b1
     v2::Int64   # Coefficient of b2
@@ -58,7 +57,7 @@ struct BulkSystem
 end
 
 
-## Propagator
+## Propagator functions
 function Ξ(r::Location, z::ComplexF64)
     position = r.v1 * b1 + r.v2 * b2
     md = √(mx * position[1]^2 + my * position[2]^2)
@@ -81,9 +80,8 @@ function propagator_matrix(z, Coords::Vector{Location})
     return out
 end
 
-## Potential shapes
-
-function mkRing(numP::Int, U::Float64, R::Float64)
+## Shapes of Potential Profiles
+function mk_Ring(numP::Int, U::Float64, R::Float64)
     res = map(
         x -> LocalPotential(
             U,
@@ -97,11 +95,11 @@ function mkRing(numP::Int, U::Float64, R::Float64)
     return res
 end
 
-function mkFig8(numP::Int, U::Float64, R::Float64)
+function mk_symCassOval(numP::Int, U::Float64, R1::Float64, vert::Float64)
     Potential_Top = map(
         x -> LocalPotential(
             U,
-            locator(R * cos(x - π / 5), R * sin(x - π / 5) + R * sin(π / 5)),
+            locator(R1 * cos(x - π / 5), R1 * sin(x - π / 5) + vert * sin(π / 5)),
         ),
         range(0, 7 * π / 5, length = Integer(numP / 2 + 1)),
     )
@@ -109,9 +107,32 @@ function mkFig8(numP::Int, U::Float64, R::Float64)
     Potential_Bottom = map(
         x -> LocalPotential(
             U,
-            locator(R * cos(x - π / 5), -R * sin(x - π / 5) - R * sin(π / 5)),
+            locator(R1 * cos(x - π / 5), -R1 * sin(x - π / 5) - vert * sin(π / 5)),
         ),
         range(0, 7 * π / 5, length = Integer(numP / 2 + 1)),
+    )
+    Potential_Bottom = Potential_Bottom[2:end-1]
+    Potential = vcat(Potential_Top, Potential_Bottom)
+    deleteat!(Potential, findall(x->x== LocalPotential(0.6, Location(-5,-1)),Potential))
+    deleteat!(Potential, findall(x->x== LocalPotential(0.6, Location(6,-1)),Potential))
+end
+
+
+function mk_asymCassOval(numP::Int, U::Float64, R1::Float64, R2::Float64, vert1::Float64, vert2::Float64)
+    Potential_Top = map(
+        x -> LocalPotential(
+            U,
+            locator(R1 * cos(x - π / 5), R1 * sin(x - π / 5) + vert1 * sin(π / 5)),
+        ),
+        range(0, 7 * π / 5, length = Integer(numP / 2 + 3)),
+    )
+
+    Potential_Bottom = map(
+        x -> LocalPotential(
+            U,
+            locator(R2 * cos(x - π / 5), -R2 * sin(x - π / 5) - vert2 * sin(π / 5)),
+        ),
+        range(0, 7 * π / 5, length = Integer(numP / 2 - 1)),
     )
     Potential_Bottom = Potential_Bottom[2:end-1]
     Potential = vcat(Potential_Top, Potential_Bottom)
