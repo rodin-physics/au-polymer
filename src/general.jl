@@ -135,5 +135,5 @@ function mk_asymCassOval(numP::Int, U::Float64, R1::Float64, R2::Float64, vert1:
         range(0, 7 * π / 5, length = Integer(numP / 2 - 1)),
     )
     Potential_Bottom = Potential_Bottom[2:end-1]
-    Potential = vcat(Potential_Top, Potential_Bottom)
+    Potential = vcat(Potential_Top, Potential_Bottom, LocalPotential(U, Location(4,-10)))
 end
